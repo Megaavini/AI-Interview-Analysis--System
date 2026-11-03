@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h2 class="fw-bold mb-4"><i class="bi bi-clock-history text-primary me-2"></i>Your Test History</h2>
+        
+        {% if interviews %}
+        <h5 class="fw-bold mb-3"><i class="bi bi-camera-video text-primary me-2"></i>Interview results</h5>
+        <div class="card card-shadow mb-5"><div class="card-body p-0"><div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light"><tr><th class="px-4 py-3">Subject</th><th class="px-4 py-3">Interview</th><th class="px-4 py-3">Personality</th><th class="px-4 py-3">Overall</th><th class="px-4 py-3">Grade</th><th class="px-4 py-3">Date</th><th></th></tr></thead>
+                <tbody>
+                {% for iv in interviews %}
+                <tr>
+                    <td class="px-4 py-3">{{ iv.subject|capitalize }}</td>
+                    <td class="px-4 py-3">{{ iv.interview_marks }}/{{ iv.interview_total|int }}</td>
+                    <td class="px-4 py-3">{{ iv.personality_marks }}/50</td>
+                    <td class="px-4 py-3 fw-bold">{{ iv.overall_pct }}/100</td>
+                    <td class="px-4 py-3"><span class="badge bg-primary">{{ iv.grade }}</span></td>
+                    <td class="px-4 py-3 text-muted small">{{ (iv.finished_at or '')[:16] }}</td>
+                    <td class="px-4 py-3"><a class="btn btn-sm btn-outline-primary" href="{{ '/interview/%d/result'|format(iv.id) if iv.status == 'done' else '/interview/%d/feedback'|format(iv.id) }}">{{ 'Report' if iv.status == 'done' else 'Give feedback' }}</a></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div></div></div>
+        <h5 class="fw-bold mb-3"><i class="bi bi-pencil-square text-primary me-2"></i>Mock tests</h5>
+        {% endif %}
+        {% if results %}
+        <div class="card card-shadow">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-4 py-3">#</th>
+                                <th class="px-4 py-3">Subject</th>
+                                <th class="px-4 py-3">Difficulty</th>
+                                <th class="px-4 py-3">Score</th>
+                                <th class="px-4 py-3">Percentage</th>
+                                <th class="px-4 py-3">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in results %}
+                            <tr>
+                                <td class="px-4 py-3">{{ loop.index }}</td>
+                                <td class="px-4 py-3"><span class="badge bg-primary bg-opacity-10 text-primary">{{ r.subject|capitalize }}</span></td>
+                                <td class="px-4 py-3">
+                                    <span class="badge 
+                                        {% if r.difficulty == 'easy' %}bg-success
+                                        {% elif r.difficulty == 'medium' %}bg-warning
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ r.difficulty|capitalize }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 fw-bold">{{ r.score }}/{{ r.total }}</td>
+                                <td class="px-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">{{ (r.score/r.total*100)|round }}%</span>
+                                        <div class="progress" style="width: 80px; height: 6px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ (r.score/r.total*100)|round }}%;"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-muted small">{{ r.date[:16] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% elif not interviews %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox display-1 text-muted"></i>
+            <h4 class="text-muted mt-3">No test history yet</h4>
+            <p class="text-muted">Take a mock test to start tracking your progress!</p>
+            <a href="/mocktest" class="btn btn-primary mt-2"><i class="bi bi-pencil-square me-2"></i>Take Mock Test</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card card-shadow text-center p-4">
+            <div class="card-body">
+                <div class="display-1 mb-3">
+                    {% if score >= 4 %}
+                        <i class="bi bi-emoji-laughing text-success"></i>
+                    {% elif score >= 3 %}
+                        <i class="bi bi-emoji-smile text-warning"></i>
+                    {% else %}
+                        <i class="bi bi-emoji-frown text-danger"></i>
+                    {% endif %}
+                </div>
+                <h3 class="fw-bold">{{ subject|capitalize }} Test Results</h3>
+                <div class="mt-2">
+                    <span class="badge 
+                        {% if difficulty == 'easy' %}bg-success
+                        {% elif difficulty == 'medium' %}bg-warning
+                        {% else %}bg-danger{% endif %} 
+                        p-2">
+                        {{ difficulty|capitalize }} Level
+                    </span>
+                </div>
+                <div class="my-4">
+                    <span class="display-2 fw-bold text-primary">{{ score }}</span>
+                    <span class="display-4 text-muted">/ {{ total }}</span>
+                </div>
+                <div class="progress mb-4" style="height: 12px;">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ (score/total*100)|round }}%;"></div>
+                </div>
+                <p class="text-muted">
+                    {% if score == total %}
+                        Perfect score! Outstanding performance! 🏆
+                    {% elif score >= total * 0.7 %}
+                        Great job! You're well prepared. 🌟
+                    {% elif score >= total * 0.5 %}
+                        Good effort! Review the topics you missed. 📚
+                    {% else %}
+                        Keep practicing! Review the basics and try again. 💪
+                    {% endif %}
+                </p>
+                <div class="d-grid gap-2 mt-4">
+                    <a href="/mocktest" class="btn btn-primary"><i class="bi bi-arrow-repeat me-2"></i>Take Another Test</a>
+                    <a href="/history" class="btn btn-outline-secondary"><i class="bi bi-clock-history me-2"></i>View History</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

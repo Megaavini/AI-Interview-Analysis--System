@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .opt { border: 2px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; cursor: pointer; display: flex; gap: 12px; align-items: center; transition: .15s; background: #fff; }
+  .opt:hover { border-color: #818cf8; background: #f5f3ff; }
+  .opt.sel { border-color: #4f46e5; background: #eef2ff; }
+  .opt .dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #94a3b8; flex: none; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; color: #64748b; }
+  .opt.sel .dot { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+  .qpill { width: 36px; height: 36px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; font-weight: 600; }
+  .qpill.done { background: #dcfce7; border-color: #22c55e; }
+  .qpill.now { outline: 3px solid #4f46e5; }
+  #camWrap { position: relative; background: #0f172a; border-radius: 16px; overflow: hidden; }
+  #cam { width: 100%; display: block; transform: scaleX(-1); }
+  #overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+</style>
+
+<div class="row g-4">
+    <!-- LEFT: camera + live monitor -->
+    <div class="col-lg-4">
+        <div class="card card-shadow">
+            <div class="card-body p-3">
+                <div id="camWrap" style="aspect-ratio:4/3">
+                    <video id="cam" autoplay playsinline muted></video>
+                    <canvas id="overlay" width="640" height="480"></canvas>
+                    <span id="camState" class="badge bg-secondary position-absolute top-0 start-0 m-2">…</span>
+                </div>
+                <canvas id="grab" class="d-none"></canvas>
+                <div class="row g-2 mt-2 text-center small">
+                    <div class="col-4"><div class="bg-light rounded-3 p-2"><div class="text-muted" data-i18n="live_check">Liveness</div><div id="liveVal" class="fw-bold">-</div></div></div>
+                    <div class="col-4"><div class="bg-light rounded-3 p-2"><div class="text-muted" data-i18n="emotion">Emotion</div><div id="emoVal" class="fw-bold">-</div></div></div>
+                    <div class="col-4"><div class="bg-light rounded-3 p-2"><div class="text-muted">Faces</div><div id="faceVal" class="fw-bold">-</div></div></div>
+                </div>
+                <div id="warn" class="alert alert-danger small mt-3 mb-0 d-none"></div>
+                <div id="modelWarn" class="alert alert-warning small mt-2 mb-0 d-none"></div>
+                <div class="small text-muted mt-2">Tip: sit in good light, face the camera, keep your whole face in the frame.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: question -->
+    <div class="col-lg-8">
+        <div class="card card-shadow">
+            <div class="card-body p-4 p-lg-5">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge badge-soft p-2" id="qType"></span>
+                    <span class="text-muted small"><span data-i18n="question">Question</span> <b id="qNo">1</b> / {{ questions|length }}</span>
+                </div>
+                <div class="progress mb-3" style="height:8px"><div id="bar" class="progress-bar bg-primary" style="width:0%"></div></div>
+                <div id="pills" class="d-flex flex-wrap gap-2 mb-4"></div>
+
+                <h4 id="qText" class="fw-bold mb-3"></h4>
+                <button class="btn btn-sm btn-outline-secondary mb-3" id="readBtn" type="button"><i class="bi bi-volume-up me-1"></i><span data-i18n="read_q">Read question</span></button>
+                <div id="opts" class="d-grid gap-2 mb-4"></div>
+
+                <div id="submitErr" class="alert alert-danger d-none"></div>
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary" id="prevBtn" type="button"><i class="bi bi-arrow-left me-1"></i>Previous</button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" id="nextBtn" type="button"><span data-i18n="next_q">Next question</span> <i class="bi bi-arrow-right ms-1"></i></button>
+                        <button class="btn btn-success" id="finishBtn" type="button"><i class="bi bi-send-check me-1"></i><span data-i18n="finish">Submit interview</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- start overlay: camera is mandatory -->
+<div class="modal fade" id="startModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-4">
+    <div class="modal-body p-5 text-center">
+        <div class="feature-icon mb-3"><i class="bi bi-camera-video"></i></div>
+        <h4 class="fw-bold">Allow camera access</h4>
+        <p class="text-muted" data-i18n="camera_note">Your camera must be on during the interview. Frames are analysed for emotion and liveness.</p>
+        <div id="startErr" class="alert alert-danger small d-none"></div>
+        <button id="startBtn" class="btn btn-primary btn-lg w-100"><i class="bi bi-camera me-2"></i>Enable camera &amp; begin</button>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const IID = {{ iv.id }};
+const QUESTIONS = {{ questions|tojson }};
+const answers = new Array(QUESTIONS.length).fill(null);      // chosen option index per question
+let cur = 0, camStream = null, frameTimer = null, started = false, finishing = false;
+const $ = id => document.getElementById(id);
+
+async function post(url, body) {
+  const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body || {})});
+  let data = null; try { data = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error((data && data.error) || ('Server error ' + r.status));
+  return data;
+}
+
+// ---------- MCQ display ----------
+function renderPills() {
+  $('pills').innerHTML = QUESTIONS.map((_, i) =>
+    `<button type="button" class="qpill ${answers[i] !== null ? 'done' : ''} ${i === cur ? 'now' : ''}" onclick="goTo(${i})">${i + 1}</button>`).join('');
+}
+function showQ() {
+  const q = QUESTIONS[cur];
+  $('qType').textContent = q.type; $('qNo').textContent = cur + 1; $('qText').textContent = q.q;
+  $('bar').style.width = (answers.filter(a => a !== null).length / QUESTIONS.length * 100) + '%';
+  $('opts').innerHTML = q.o.map((txt, i) =>
+    `<div class="opt ${answers[cur] === i ? 'sel' : ''}" onclick="choose(${i})"><span class="dot">${'ABCD'[i]}</span><span>${txt.replace(/</g, '&lt;')}</span></div>`).join('');
+  $('prevBtn').disabled = cur === 0;
+  $('nextBtn').classList.toggle('d-none', cur === QUESTIONS.length - 1);
+  renderPills();
+}
+function choose(i) {
+  answers[cur] = i; showQ();
+  post(`/api/interview/${IID}/answer`, {idx: cur, choice: i}).catch(() => {});   // autosave; final submit sends everything again
+}
+function goTo(i) { cur = i; showQ(); }
+$('prevBtn').onclick = () => { if (cur > 0) goTo(cur - 1); };
+$('nextBtn').onclick = () => { if (cur < QUESTIONS.length - 1) goTo(cur + 1); };
+$('readBtn').onclick = () => {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const q = QUESTIONS[cur];
+  const u = new SpeechSynthesisUtterance(q.q + '. ' + q.o.map((o, i) => 'Option ' + 'ABCD'[i] + ': ' + o).join('. '));
+  u.lang = 'en-IN'; speechSynthesis.speak(u);
+};
+
+// ---------- submit ----------
+$('finishBtn').onclick = async () => {
+  const left = answers.filter(a => a === null).length;
+  if (!confirm(left ? `${left} question(s) are unanswered. Submit anyway?` : 'Submit the interview and see your marks?')) return;
+  const btn = $('finishBtn'); btn.disabled = true; $('submitErr').classList.add('d-none');
+  try {
+    const r = await post(`/api/interview/${IID}/finish`, {answers});
+    finishing = true; clearTimeout(frameTimer);
+    if (camStream) camStream.getTracks().forEach(t => t.stop());
+    location.href = r.redirect;
+  } catch (e) {
+    btn.disabled = false;
+    $('submitErr').textContent = 'Could not submit: ' + e.message + '. Please press Submit again.';
+    $('submitErr').classList.remove('d-none');
+  }
+};
+
+// ---------- camera + proctoring loop ----------
+async function startCamera() {
+  camStream = await navigator.mediaDevices.getUserMedia({video: {width: {ideal: 640}, height: {ideal: 480}}, audio: false});
+  const v = $('cam'); v.srcObject = camStream;
+  await new Promise(res => { v.onloadedmetadata = res; });
+  await v.play().catch(() => {});
+  $('camWrap').style.aspectRatio = v.videoWidth + '/' + v.videoHeight;
+  const ov = $('overlay'); ov.width = v.videoWidth; ov.height = v.videoHeight;
+  $('camState').className = 'badge bg-success position-absolute top-0 start-0 m-2';
+  $('camState').innerHTML = '<i class="bi bi-camera-video me-1"></i>' + t('camera_on');
+  camStream.getVideoTracks()[0].onended = () => { $('camState').className = 'badge bg-danger position-absolute top-0 start-0 m-2'; $('camState').textContent = t('camera_off'); };
+}
+function drawBox(r) {
+  const ov = $('overlay'), g = ov.getContext('2d'); g.clearRect(0, 0, ov.width, ov.height);
+  if (!r.box) return;
+  const k = ov.width / r.frame_w;                         // server frame -> overlay scale
+  const [x, y, w, h] = r.box.map(n => n * k);
+  const mx = ov.width - (x + w);                          // video is mirrored on screen
+  const col = r.fake ? '#ef4444' : (r.liveness === 'Real' ? '#22c55e' : '#f59e0b');
+  g.lineWidth = 3; g.strokeStyle = col; g.strokeRect(mx, y, w, h);
+  g.font = 'bold 16px Arial'; const label = r.liveness + (r.emotion ? ' · ' + r.emotion : '');
+  g.fillStyle = col; g.fillRect(mx, Math.max(0, y - 24), g.measureText(label).width + 12, 24);
+  g.fillStyle = '#fff'; g.fillText(label, mx + 6, Math.max(17, y - 7));
+}
+async function sendFrame() {
+  if (finishing) return;
+  const v = $('cam'), c = $('grab');
+  if (v.videoWidth) {
+    c.width = Math.min(640, v.videoWidth); c.height = Math.round(c.width * v.videoHeight / v.videoWidth);   // keep the real aspect ratio
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    try {
+      const r = await post(`/api/interview/${IID}/frame`, {image: c.toDataURL('image/jpeg', 0.8), q: cur});
+      $('liveVal').textContent = r.liveness + (r.confidence && r.face ? ' ' + r.confidence + '%' : '');
+      $('liveVal').className = 'fw-bold ' + (r.fake ? 'text-danger' : r.liveness === 'Real' ? 'text-success' : '');
+      $('emoVal').textContent = r.emotion || '-';
+      $('faceVal').textContent = r.faces;
+      const w = $('warn'); w.classList.toggle('d-none', !r.warning); w.textContent = r.warning || '';
+      drawBox(r);
+      const m = r.models || {}, msgs = [];
+      if (!m.liveness) msgs.push('Liveness model not loaded: ' + (m.liveness_err || 'unknown'));
+      if (!m.emotion) msgs.push('DeepFace not available: ' + (m.emotion_err || 'unknown'));
+      else if (r.face && !r.fake && !r.emotion && m.emotion_err) msgs.push('Emotion analysis failed: ' + m.emotion_err);
+      const mw = $('modelWarn'); mw.classList.toggle('d-none', !msgs.length); mw.textContent = msgs.join(' | ');
+    } catch (e) { $('modelWarn').classList.remove('d-none'); $('modelWarn').textContent = 'Monitoring request failed: ' + e.message; }
+  }
+  frameTimer = setTimeout(sendFrame, 2000);               // next frame only after the previous one returned
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden && started && !finishing) post(`/api/interview/${IID}/event`, {type: 'tab'}).catch(() => {}); });
+window.addEventListener('beforeunload', e => { if (started && !finishing) { e.preventDefault(); e.returnValue = ''; } });
+
+const modal = new bootstrap.Modal($('startModal')); modal.show();
+$('startBtn').onclick = async () => {
+  try { await startCamera(); modal.hide(); started = true; showQ(); sendFrame(); }
+  catch (e) {
+    const el = $('startErr'); el.classList.remove('d-none');
+    el.textContent = 'Camera could not be started: ' + e.message + ' (allow camera access; use localhost or HTTPS).';
+  }
+};
+</script>
+{% endblock %}

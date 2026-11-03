@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Home Page with Slideshow -->
+<div class="row g-4 align-items-center">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold mb-3" style="color: #1e293b;">
+            <i class="bi bi-robot text-primary me-2"></i>AI Interview System
+        </h1>
+        <p class="lead text-muted mb-4">
+            Revolutionizing the interview process with <strong>emotion detection</strong> and 
+            <strong>proctoring</strong> powered by artificial intelligence.
+        </p>
+        <div class="d-flex flex-wrap gap-3 mb-4">
+            <span class="badge bg-primary bg-opacity-10 text-primary p-3 rounded-4">
+                <i class="bi bi-emoji-smile fs-5 me-2"></i>Emotion AI
+            </span>
+            <span class="badge bg-success bg-opacity-10 text-success p-3 rounded-4">
+                <i class="bi bi-camera-video fs-5 me-2"></i>Proctoring
+            </span>
+            <span class="badge bg-warning bg-opacity-10 text-warning p-3 rounded-4">
+                <i class="bi bi-bar-chart fs-5 me-2"></i>Analytics
+            </span>
+        </div>
+        <div class="bg-light p-4 rounded-4">
+            <h5 class="fw-bold"><i class="bi bi-info-circle text-primary me-2"></i>About This Project</h5>
+            <p class="text-muted mb-0">
+                Our AI-powered interview system combines real-time emotion recognition and advanced proctoring 
+                to create a fair, unbiased, and efficient hiring process. Candidates can take mock tests, 
+                attend live interviews, and receive instant feedback.
+            </p>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div id="homeCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="0" class="active"></button>
+                <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="1"></button>
+                <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="2"></button>
+            </div>
+            <div class="carousel-inner rounded-4 shadow-lg">
+                <div class="carousel-item active">
+                    <img src="https://picsum.photos/seed/ai1/800/400" class="d-block w-100" alt="AI Interview">
+                    <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded-3 p-3">
+                        <h5>AI-Powered Interviews</h5>
+                        <p>Real-time emotion and proctoring</p>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                    <img src="https://picsum.photos/seed/ai2/800/400" class="d-block w-100" alt="Mock Tests">
+                    <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded-3 p-3">
+                        <h5>Mock Tests</h5>
+                        <p>Practice with domain-specific questions</p>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                    <img src="https://picsum.photos/seed/ai3/800/400" class="d-block w-100" alt="Analytics">
+                    <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded-3 p-3">
+                        <h5>Performance Analytics</h5>
+                        <p>Track your progress over time</p>
+                    </div>
+                </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#homeCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#homeCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row g-4 mt-5">
+    <div class="col-md-4">
+        <div class="card card-shadow h-100 p-4 text-center">
+            <div class="feature-icon mb-3"><i class="bi bi-emoji-laughing"></i></div>
+            <h5 class="fw-bold">Emotion Detection</h5>
+            <p class="text-muted small">Advanced AI analyzes facial expressions to gauge candidate confidence and engagement.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow h-100 p-4 text-center">
+            <div class="feature-icon mb-3"><i class="bi bi-shield-check"></i></div>
+            <h5 class="fw-bold">Proctoring System</h5>
+            <p class="text-muted small">Multi-factor authentication and behavior monitoring ensures interview integrity.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow h-100 p-4 text-center">
+            <div class="feature-icon mb-3"><i class="bi bi-graph-up"></i></div>
+            <h5 class="fw-bold">Smart Analytics</h5>
+            <p class="text-muted small">Comprehensive reporting and insights for both candidates and administrators.</p>
+        </div>
+    </div>
+</div>
+
+{% if not session.user_id %}
+<div class="text-center mt-5">
+    <a href="/register" class="btn btn-primary btn-lg px-5 me-2"><i class="bi bi-person-plus me-2"></i>Get Started</a>
+    <a href="/login" class="btn btn-outline-primary btn-lg px-5"><i class="bi bi-box-arrow-in-right me-2"></i>Login</a>
+</div>
+{% endif %}
+{% endblock %}

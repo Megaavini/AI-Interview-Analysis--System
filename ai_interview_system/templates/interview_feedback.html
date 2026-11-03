@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card card-shadow">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="feature-icon mb-2"><i class="bi bi-chat-heart"></i></div>
+                    <h3 class="fw-bold" data-i18n="feedback_title">Interview Feedback</h3>
+                    <p class="text-muted" data-i18n="feedback_sub">Tell us about your experience</p>
+                </div>
+                <form method="POST">
+                    <label class="form-label fw-semibold" data-i18n="rating">Rating</label>
+                    <div class="d-flex justify-content-between mb-4" id="stars">
+                        {% for i in range(1,6) %}
+                        <div class="text-center">
+                            <input type="radio" class="btn-check" name="rating" id="r{{ i }}" value="{{ i }}" required>
+                            <label class="btn btn-outline-warning rounded-circle" style="width:52px;height:52px;line-height:34px" for="r{{ i }}">{{ i }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="small text-muted mb-3 d-flex justify-content-between"><span>1 = Poor</span><span>5 = Excellent</span></div>
+                    <label class="form-label fw-semibold" data-i18n="comments">Comments</label>
+                    <textarea name="comments" rows="4" class="form-control mb-4" placeholder="Questions, camera, difficulty, suggestions..."></textarea>
+                    <button class="btn btn-primary btn-lg w-100" type="submit" data-i18n="submit_feedback">Submit &amp; see result</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

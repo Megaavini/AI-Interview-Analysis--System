@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card card-shadow">
+            <div class="card-body p-5">
+                <h3 class="fw-bold mb-4"><i class="bi bi-person-badge text-primary me-2"></i><span data-i18n="nav_profile">Profile</span></h3>
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" data-i18n="full_name">Full name</label>
+                        <input type="text" name="full_name" class="form-control" value="{{ user.full_name or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" data-i18n="email">E-mail</label>
+                        <input type="email" name="email" class="form-control" value="{{ user.email or '' }}" required>
+                        <div class="form-text">Shortlist e-mails from HR are sent to this address.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" data-i18n="phone">Phone (optional)</label>
+                        <input type="tel" name="phone" class="form-control" value="{{ user.phone or '' }}">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold"><i class="bi bi-file-earmark-person me-1"></i><span data-i18n="my_resume">My Resume</span></label>
+                        {% if user.resume_file %}
+                            <div class="mb-2 d-flex gap-2"><button type="button" class="btn btn-sm btn-primary" onclick="openResume({{ user.id }})"><i class="bi bi-eye me-1"></i>View resume</button><a href="/resume/{{ user.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download me-1"></i>{{ user.resume_file.rsplit('.',1)[-1]|upper }}</a></div>
+                        {% else %}
+                            <div class="text-muted small mb-2" data-i18n="no_resume">No resume uploaded yet</div>
+                        {% endif %}
+                        <input type="file" name="resume" class="form-control" accept=".pdf,.doc,.docx">
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit" data-i18n="update_profile">Update profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

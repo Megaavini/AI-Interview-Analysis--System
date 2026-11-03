@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="fw-bold"><i class="bi bi-grid text-primary me-2"></i><span data-i18n="dash_title">Dashboard</span></h2>
+            <span class="badge bg-primary bg-opacity-10 text-primary p-3 rounded-4">
+                <i class="bi bi-person-circle me-2"></i>{{ user.full_name or session.username }}
+            </span>
+        </div>
+    </div>
+
+    {% if user.shortlisted %}
+    <div class="col-12">
+        <div class="alert alert-success d-flex align-items-start gap-3 shadow-sm rounded-4 mb-0">
+            <i class="bi bi-trophy-fill fs-2"></i>
+            <div>
+                <h5 class="mb-1" data-i18n="shortlisted_banner">You have been shortlisted!</h5>
+                <div>{{ user.shortlist_job or '' }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="col-md-6">
+        <div class="card card-shadow h-100">
+            <div class="card-body p-4 text-center">
+                <div class="feature-icon mb-3"><i class="bi bi-pencil-square"></i></div>
+                <h4 class="fw-bold" data-i18n="mock_title">Mock Test</h4>
+                <p class="text-muted" data-i18n="mock_desc">Practice with difficulty-based multiple-choice questions</p>
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    <span class="badge bg-success">Easy</span><span class="badge bg-warning">Medium</span><span class="badge bg-danger">Hard</span>
+                </div>
+                <a href="/mocktest" class="btn btn-primary px-4"><span data-i18n="start_mock">Start Mock Test</span> <i class="bi bi-arrow-right ms-2"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card card-shadow h-100">
+            <div class="card-body p-4 text-center">
+                <div class="feature-icon mb-3"><i class="bi bi-camera-video"></i></div>
+                <h4 class="fw-bold" data-i18n="int_title">Attend Interview</h4>
+                <p class="text-muted" data-i18n="int_desc">Live AI-proctored interview with emotion detection</p>
+                <a href="/attend" class="btn btn-outline-primary px-4"><span data-i18n="go_interview">Go to Interview</span> <i class="bi bi-arrow-right ms-2"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card card-shadow h-100"><div class="card-body p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-person text-primary me-2"></i><span data-i18n="my_resume">My Resume</span></h5>
+            {% if user.resume_file %}
+                <button type="button" class="btn btn-sm btn-success me-2" onclick="openResume({{ user.id }})"><i class="bi bi-eye me-1"></i>View</button><a href="/resume/{{ user.id }}" class="btn btn-sm btn-outline-primary me-2"><i class="bi bi-download me-1"></i>{{ user.resume_file.rsplit('.',1)[-1]|upper }}</a>
+            {% else %}
+                <p class="text-muted mb-2" data-i18n="no_resume">No resume uploaded yet</p>
+            {% endif %}
+            <a href="/profile" class="btn btn-sm btn-primary"><i class="bi bi-upload me-1"></i><span data-i18n="upload_resume">Upload resume</span></a>
+        </div></div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card card-shadow h-100"><div class="card-body p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-envelope-paper text-primary me-2"></i><span data-i18n="messages">Messages from HR</span></h5>
+            {% for n in notes %}
+                <div class="border rounded-3 p-3 mb-2">
+                    <div class="fw-semibold">{{ n.title }}</div>
+                    <div class="small text-muted" style="white-space:pre-line">{{ n.message }}</div>
+                    <div class="small text-muted mt-1">{{ n.created_at[:16] }}</div>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">—</p>
+            {% endfor %}
+        </div></div>
+    </div>
+
+    <div class="col-12">
+        <div class="card card-shadow"><div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-bar-chart text-primary me-2"></i><span data-i18n="recent_interviews">Recent interview results</span></h5>
+                <a href="/history" class="text-decoration-none fw-semibold"><span data-i18n="view_results">View all results</span> →</a>
+            </div>
+            {% for iv in interviews %}
+                <a href="/interview/{{ iv.id }}/result" class="d-flex justify-content-between text-decoration-none text-dark border rounded-3 p-3 mb-2">
+                    <span><b>{{ iv.subject|capitalize }}</b> · {{ iv.finished_at[:16] if iv.finished_at else '' }}</span>
+                    <span class="fw-bold text-primary">{{ iv.overall_pct }}/100 · {{ iv.grade }}</span>
+                </a>
+            {% else %}
+                <p class="text-muted mb-0">—</p>
+            {% endfor %}
+        </div></div>
+    </div>
+</div>
+{% endblock %}

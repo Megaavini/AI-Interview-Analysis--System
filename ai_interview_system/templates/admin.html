@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-shield-lock text-warning me-2"></i>{{ 'Admin Panel' if session.role == 'admin' else 'HR Panel' }}</h2>
+    <span class="badge bg-warning bg-opacity-10 text-warning p-3 rounded-4"><i class="bi bi-person-circle me-2"></i>{{ session.role|upper }}: {{ session.username }}</span>
+</div>
+
+<ul class="nav nav-pills mb-4 gap-2" id="adminTabs">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#candidates" type="button"><i class="bi bi-people me-1"></i>Candidates &amp; Shortlist</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#mocks" type="button"><i class="bi bi-pencil-square me-1"></i>Mock results</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#maillog" type="button"><i class="bi bi-envelope-check me-1"></i>E-mail log</button></li>
+    {% if session.role == 'admin' %}
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#hr" type="button"><i class="bi bi-person-badge me-1"></i>HR users</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#email" type="button"><i class="bi bi-envelope-at me-1"></i>SMTP / Test mail</button></li>
+    {% endif %}
+</ul>
+
+<div class="tab-content">
+<!-- CANDIDATES -->
+<div class="tab-pane fade show active" id="candidates">
+  <form method="POST" action="/admin/shortlist">
+    <div class="card card-shadow mb-3"><div class="card-body p-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3"><label class="form-label fw-semibold">Job / position</label><input name="job_title" class="form-control" placeholder="e.g. Python Developer"></div>
+            <div class="col-md-5"><label class="form-label fw-semibold">Message to candidates</label><input name="message" class="form-control" placeholder="Next round details, date, venue..."></div>
+            <div class="col-md-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="send_email" id="sendMail" checked {{ '' if smtp_ok else 'disabled' }}><label class="form-check-label" for="sendMail">Send e-mail</label></div>
+                {% if not smtp_ok %}<div class="small text-danger">SMTP not set in .env</div>{% endif %}</div>
+            <div class="col-md-2"><button class="btn btn-success w-100" type="submit"><i class="bi bi-check2-all me-1"></i>Shortlist selected</button></div>
+        </div>
+    </div></div>
+
+    <div class="card card-shadow"><div class="card-body p-0"><div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="bg-light"><tr>
+            <th class="px-3 py-3"><input type="checkbox" onclick="document.querySelectorAll('.pick').forEach(c=>c.checked=this.checked)"></th>
+            <th class="py-3">Candidate</th><th class="py-3">Resume</th><th class="py-3">Mock avg</th>
+            <th class="py-3">Interview /50</th><th class="py-3">Personality /50</th><th class="py-3">Overall</th><th class="py-3">Integrity</th><th class="py-3">Status</th><th></th>
+        </tr></thead>
+        <tbody>
+        {% for c in cands %}{% set u = c.u %}{% set iv = c.iv %}
+        <tr>
+            <td class="px-3"><input type="checkbox" class="pick" name="user_ids" value="{{ u.id }}"></td>
+            <td><div class="fw-semibold">{{ u.full_name or u.username }}</div><div class="small text-muted">{{ u.email or 'no e-mail' }}</div></td>
+            <td class="text-nowrap">{% if u.resume_file %}<button type="button" class="btn btn-sm btn-success" onclick="openResume({{ u.id }})" title="View resume on screen"><i class="bi bi-eye"></i></button> <a class="btn btn-sm btn-outline-primary" href="/resume/{{ u.id }}" title="Download"><i class="bi bi-download"></i></a>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td>{{ (c.mock_avg|round(0)|int ~ '%') if c.mock_n else '—' }}</td>
+            <td>{{ iv.interview_marks if iv else '—' }}</td>
+            <td>{{ iv.personality_marks if iv else '—' }}</td>
+            <td>{% if iv %}<b>{{ iv.overall_pct }}</b> <span class="badge bg-primary">{{ iv.grade }}</span>{% else %}—{% endif %}</td>
+            <td>{% if not iv %}—{% elif c.flags %}<span class="badge bg-danger" title="{{ c.flags|join('; ') }}">Flagged</span>{% else %}<span class="badge bg-success">Clean</span>{% endif %}</td>
+            <td>{% if u.shortlisted %}<span class="badge bg-success">Shortlisted</span><div class="small text-muted">{{ u.shortlist_job }}</div>{% else %}<span class="badge bg-secondary">Pending</span>{% endif %}</td>
+            <td class="text-nowrap">
+                {% if iv %}<a class="btn btn-sm btn-outline-secondary" href="/interview/{{ iv.id }}/result" title="Report card"><i class="bi bi-file-earmark-bar-graph"></i></a>{% endif %}
+                {% if u.shortlisted %}<button class="btn btn-sm btn-outline-danger" formaction="/admin/unshortlist/{{ u.id }}" formnovalidate title="Remove from shortlist"><i class="bi bi-x-lg"></i></button>{% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" class="text-center text-muted py-5">No candidates registered yet</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div></div></div>
+  </form>
+</div>
+
+<!-- MOCK RESULTS -->
+<div class="tab-pane fade" id="mocks">
+  <div class="card card-shadow"><div class="card-body p-0">
+    {% if results %}
+    <div class="table-responsive"><table class="table table-hover mb-0">
+        <thead class="bg-light"><tr><th class="px-4 py-3">#</th><th>Username</th><th>Subject</th><th>Difficulty</th><th>Score</th><th>%</th><th>Date</th></tr></thead>
+        <tbody>
+        {% for r in results %}
+        <tr><td class="px-4 py-3">{{ loop.index }}</td><td class="fw-bold">{{ r.username }}</td>
+            <td>{{ r.subject|capitalize }}</td>
+            <td><span class="badge {{ 'bg-success' if r.difficulty == 'easy' else 'bg-warning' if r.difficulty == 'medium' else 'bg-danger' }}">{{ r.difficulty|capitalize }}</span></td>
+            <td class="fw-bold">{{ r.score }}/{{ r.total }}</td><td>{{ (r.score/r.total*100)|round }}%</td><td class="text-muted small">{{ r.date[:16] }}</td></tr>
+        {% endfor %}
+        </tbody></table></div>
+    {% else %}<div class="text-center py-5 text-muted">No mock tests taken yet</div>{% endif %}
+  </div></div>
+</div>
+
+<!-- MAIL LOG -->
+<div class="tab-pane fade" id="maillog">
+  <div class="card card-shadow"><div class="card-body p-0"><div class="table-responsive"><table class="table mb-0">
+    <thead class="bg-light"><tr><th class="px-4 py-3">Date</th><th>Candidate</th><th>Subject</th><th>E-mail status</th><th>By</th></tr></thead>
+    <tbody>
+    {% for m in mails %}<tr><td class="px-4 py-3 small text-muted">{{ m.created_at[:16] }}</td><td>{{ m.username }}</td><td>{{ m.title }}</td>
+        <td>{% if m.email_status == 'sent' %}<span class="badge bg-success">sent</span>{% elif m.email_status == 'not emailed' %}<span class="badge bg-secondary">not emailed</span>{% else %}<span class="badge bg-danger">failed</span> <span class="small text-muted">{{ m.email_status }}</span>{% endif %}</td>
+        <td>{{ m.created_by }}</td></tr>
+    {% else %}<tr><td colspan="5" class="text-center text-muted py-5">Nothing sent yet</td></tr>{% endfor %}
+    </tbody></table></div></div></div>
+</div>
+
+{% if session.role == 'admin' %}
+<!-- HR USERS -->
+<div class="tab-pane fade" id="hr">
+  <div class="row g-4">
+    <div class="col-md-5"><div class="card card-shadow"><div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Create HR account</h5>
+        <form method="POST" action="/admin/hr/create">
+            <input name="username" class="form-control mb-2" placeholder="HR username" required>
+            <input name="email" type="email" class="form-control mb-2" placeholder="HR e-mail (optional)">
+            <input name="password" type="password" class="form-control mb-3" placeholder="Password (6+ chars)" required>
+            <button class="btn btn-primary w-100">Create HR user</button>
+        </form>
+        <div class="small text-muted mt-2">HR users can view candidates, resumes, reports and shortlist / e-mail candidates.</div>
+    </div></div></div>
+    <div class="col-md-7"><div class="card card-shadow"><div class="card-body p-4">
+        <h5 class="fw-bold mb-3">HR users</h5>
+        <ul class="list-group list-group-flush">{% for h in hr_users %}<li class="list-group-item">{{ h.username }} <span class="text-muted small">{{ h.email or '' }}</span></li>{% else %}<li class="list-group-item text-muted">None yet</li>{% endfor %}</ul>
+    </div></div></div>
+  </div>
+</div>
+
+<!-- SMTP -->
+<div class="tab-pane fade" id="email">
+  <div class="card card-shadow"><div class="card-body p-4">
+    <h5 class="fw-bold mb-3">SMTP status</h5>
+    {% if smtp_ok %}<div class="alert alert-success">SMTP is configured. From address: <b>{{ mail_from }}</b></div>
+    {% else %}<div class="alert alert-warning">SMTP is not configured. Create a <code>.env</code> file next to <code>app.py</code> (see <code>.env.example</code>) with SMTP_USER, SMTP_APP_PASSWORD and MAIL_FROM, then restart the app.</div>{% endif %}
+    <form method="POST" action="/admin/test_email" class="row g-2">
+        <div class="col-md-8"><input type="email" name="to" class="form-control" placeholder="Send a test e-mail to..." required></div>
+        <div class="col-md-4"><button class="btn btn-primary w-100" {{ '' if smtp_ok else 'disabled' }}>Send test e-mail</button></div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // open the tab named in the URL hash (e.g. /admin#email)
+  const h = location.hash; if (h) { const b = document.querySelector(`[data-bs-target="${h}"]`); if (b) new bootstrap.Tab(b).show(); }
+</script>
+{% endblock %}
